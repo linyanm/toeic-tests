@@ -5,6 +5,20 @@ export const emptyState = () => ({
   mistakes: {},
   words: {},
 });
+// Part 1/2 choices are spoken, not printed. Reveal text only during review.
+export const optionDisplayText = (question, option, revealed) =>
+  question.part <= 2 && !revealed ? "" : option.text;
+
+export function groupMistakes(records, unresolvedOnly = true) {
+  const groups = { listening: [], reading: [] };
+  for (const item of Object.values(records)) {
+    if (unresolvedOnly && item.resolved) continue;
+    groups[item.part <= 4 ? "listening" : "reading"].push(item);
+  }
+  for (const list of Object.values(groups))
+    list.sort((a, b) => b.wrongCount - a.wrongCount || b.lastAt - a.lastAt);
+  return groups;
+}
 export const questionIds = (bank, section) =>
   bank.questions
     .filter(

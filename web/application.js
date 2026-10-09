@@ -7,6 +7,8 @@ import {
   reviewIds,
   remainingSeconds,
   formatTime,
+  optionDisplayText,
+  groupMistakes,
 } from "./engine.js";
 import { POS_LABELS } from "./vocabulary.js";
 const $ = (s) => document.querySelector(s),
@@ -44,8 +46,7 @@ let setupTest = 1,
   wordRevealed = false,
   wordQuery = "",
   wordUnmastered = false,
-  mistakePart = "",
-  mistakeTag = "",
+  mistakeSection = "listening",
   mistakeUnresolved = true;
 const STORAGE_KEY = "toeic-four-tests-v1";
 function validState(value) {
@@ -229,7 +230,7 @@ function practice() {
   const isText = g.text && /[A-Za-z]/.test(g.text) && g.text.length > 80;
   const material = g.images.length
     ? `<div class="reader-toolbar"><div class="segmented"><button data-action="reader-text" aria-pressed="${readerMode === "text"}" ${!isText ? "disabled" : ""}>文字阅读</button><button data-action="reader-image" aria-pressed="${readerMode === "image" || !isText}">原书排版</button></div><button class="button secondary small" data-action="reader-full">全屏阅读</button><button class="button secondary small" data-action="zoom-out" aria-label="缩小材料">A−</button><button class="button secondary small" data-action="zoom-in" aria-label="放大材料">A＋</button></div><div class="reading-scroll">${readerMode === "text" && isText ? `<div class="passage-text" style="font-size:${1.075 * readerZoom}rem"><p class="reader-note">文字版便于阅读；表格、图示及聊天版式请切换「原书排版」核对。</p>${readableText(g.text)}</div>` : `<div style="width:${100 * readerZoom}%;min-width:100%">${g.images.map(sourceImage).join("")}</div>`}</div>`
-    : `<div class="audio-instruction"><div class="sound-symbol" aria-hidden="true">♫</div><h2>听录音，选出合适的回答</h2><p>题干请听录音，选项区已提供英文内容，方便自测。${shown ? "下方可查看原书解析与听力文本。" : "提交后可查看原书解析。"}</p></div>`;
+    : `<div class="audio-instruction"><div class="sound-symbol" aria-hidden="true">♫</div><h2>听录音，选出合适的回答</h2><p>问句和三个应答都在录音中。${shown ? "已显示选项英文，下方可查看原书解析与听力文本。" : "作答时只显示 A、B、C；提交后可查看英文选项和解析。"}</p></div>`;
   const qids = s.ids.filter((id) => {
     const n = Number(id.split("q")[1]);
     return (
@@ -238,7 +239,7 @@ function practice() {
       (s.phase === "listening" ? n <= 100 : n > 100)
     );
   });
-  main.innerHTML = `<div class="practice-title"><div><p class="eyebrow">ACTUAL TEST 0${s.test} · PART ${q.part} ${partNames[q.part]}</p><h1>${done ? "试卷复盘" : isExam ? "模拟考试" : "自由练习"}</h1></div><div class="actions"><span id="timer" class="timer"></span>${done ? '<a class="button secondary" href="#history">返回记录</a>' : '<button class="button secondary" data-action="save-exit">保存并返回</button><button class="button" data-action="submit">交卷</button>'}</div></div><div class="practice-layout"><section class="reading-panel"><div class="panel-heading"><h2>${q.part <= 4 ? "听力材料" : q.part === 5 ? "原题核对" : "阅读材料"}</h2><span>${g.start === g.end ? `第 ${g.start} 题` : `第 ${g.start}–${g.end} 题`}</span></div>${material}</section><section class="question-panel"><div class="question-top"><p class="question-count">QUESTION ${q.number} <span>/ ${s.ids.length} 题</span></p><button class="mark-button ${s.marked.includes(q.id) ? "marked" : ""}" data-action="mark" aria-pressed="${s.marked.includes(q.id)}" ${done ? "disabled" : ""}>${s.marked.includes(q.id) ? "★ 已标记" : "☆ 复查"}</button></div><h2 class="question-stem">${esc(q.part === 6 ? `请为原文第 ${q.number} 空选择答案。` : q.stem)}</h2><div class="options" role="group" aria-label="第 ${q.number} 题选项">${q.options.map((o) => `<button class="option ${s.answers[q.id] === o.key ? "selected" : ""} ${shown && o.key === q.answer ? "correct" : ""} ${shown && s.answers[q.id] === o.key && o.key !== q.answer ? "incorrect" : ""}" data-answer="${o.key}" aria-pressed="${s.answers[q.id] === o.key}" ${shown ? "disabled" : ""}><span class="option-key">${o.key}</span><span>${esc(o.text)}${shown && o.key === q.answer ? " <strong>✓ 正确答案</strong>" : ""}</span></button>`).join("")}</div>${!isExam && !shown ? `<button class="button reveal-button" data-action="reveal" ${!allAnswered ? "disabled" : ""}>${groupIds.length > 1 ? "提交本组，查看解析" : "提交答案，查看解析"}</button>${!allAnswered && groupIds.length > 1 ? '<p class="muted">完成本组全部题目后揭晓，避免提前看到答案。</p>' : ""}` : ""}${shown ? `<section class="explanation"><div class="answer-summary">正确答案 ${q.answer} · ${!s.answers[q.id] ? "未作答" : s.answers[q.id] === q.answer ? "回答正确" : "需要复习"}</div><p class="explanation-tag">${esc(q.tag)} <span>${"★".repeat(q.difficulty)}</span></p><h3>原书中文解析</h3><p>${esc(q.text).replace(/\n/g, "<br>")}</p>${q.extra ? `<details><summary>原书词汇、听力文本与补充内容</summary><div class="extra-text">${esc(q.extra)}</div></details>` : ""}<button class="button secondary small" data-action="explanation-source" data-page="${q.explanationPage}">查看解析原页</button></section>` : ""}<div class="question-actions"><button class="button secondary" data-action="prev" ${s.index === 0 ? "disabled" : ""}>上一题</button><button class="button" data-action="next" ${s.index === s.ids.length - 1 ? "disabled" : ""}>下一题</button></div><div class="group-tabs">${groupIds
+  main.innerHTML = `<div class="practice-title"><div><p class="eyebrow">ACTUAL TEST 0${s.test} · PART ${q.part} ${partNames[q.part]}</p><h1>${done ? "试卷复盘" : isExam ? "模拟考试" : "自由练习"}</h1></div><div class="actions"><span id="timer" class="timer"></span>${done ? '<a class="button secondary" href="#history">返回记录</a>' : '<button class="button secondary" data-action="save-exit">保存并返回</button><button class="button" data-action="submit">交卷</button>'}</div></div><div class="practice-layout"><section class="reading-panel"><div class="panel-heading"><h2>${q.part <= 4 ? "听力材料" : q.part === 5 ? "原题核对" : "阅读材料"}</h2><span>${g.start === g.end ? `第 ${g.start} 题` : `第 ${g.start}–${g.end} 题`}</span></div>${material}</section><section class="question-panel"><div class="question-top"><p class="question-count">QUESTION ${q.number} <span>/ ${s.ids.length} 题</span></p><button class="mark-button ${s.marked.includes(q.id) ? "marked" : ""}" data-action="mark" aria-pressed="${s.marked.includes(q.id)}" ${done ? "disabled" : ""}>${s.marked.includes(q.id) ? "★ 已标记" : "☆ 复查"}</button></div><h2 class="question-stem">${esc(q.part === 6 ? `请为原文第 ${q.number} 空选择答案。` : q.stem)}</h2><div class="options" role="group" aria-label="第 ${q.number} 题选项">${q.options.map((o) => `<button class="option ${s.answers[q.id] === o.key ? "selected" : ""} ${shown && o.key === q.answer ? "correct" : ""} ${shown && s.answers[q.id] === o.key && o.key !== q.answer ? "incorrect" : ""}" data-answer="${o.key}" aria-pressed="${s.answers[q.id] === o.key}" ${shown ? "disabled" : ""}><span class="option-key">${o.key}</span><span>${esc(optionDisplayText(q,o,shown))}${shown && o.key === q.answer ? " <strong>✓ 正确答案</strong>" : ""}</span></button>`).join("")}</div>${!isExam && !shown ? `<button class="button reveal-button" data-action="reveal" ${!allAnswered ? "disabled" : ""}>${groupIds.length > 1 ? "提交本组，查看解析" : "提交答案，查看解析"}</button>${!allAnswered && groupIds.length > 1 ? '<p class="muted">完成本组全部题目后揭晓，避免提前看到答案。</p>' : ""}` : ""}${shown ? `<section class="explanation"><div class="answer-summary">正确答案 ${q.answer} · ${!s.answers[q.id] ? "未作答" : s.answers[q.id] === q.answer ? "回答正确" : "需要复习"}</div><p class="explanation-tag">${esc(q.tag)} <span>${"★".repeat(q.difficulty)}</span></p><h3>原书中文解析</h3><p>${esc(q.text).replace(/\n/g, "<br>")}</p>${q.extra ? `<details><summary>原书词汇、听力文本与补充内容</summary><div class="extra-text">${esc(q.extra)}</div></details>` : ""}<button class="button secondary small" data-action="explanation-source" data-page="${q.explanationPage}">查看解析原页</button></section>` : ""}<div class="question-actions"><button class="button secondary" data-action="prev" ${s.index === 0 ? "disabled" : ""}>上一题</button><button class="button" data-action="next" ${s.index === s.ids.length - 1 ? "disabled" : ""}>下一题</button></div><div class="group-tabs">${groupIds
     .map((id) => {
       const x = bank.questions.find((x) => x.id === id);
       return `<button class="button small ${id === q.id ? "" : "secondary"}" data-jump="${id}">${x.number}${s.answers[id] ? " ✓" : ""}</button>`;
@@ -362,23 +363,9 @@ function result(id) {
   main.innerHTML = `<div class="heading"><div><p class="eyebrow">ACTUAL TEST 0${s.test} · REVIEW</p><h1>这次练习，完成了。</h1><p>先看薄弱题型，再回到具体的题。</p></div><a class="button secondary" href="#home">返回试卷</a></div><div class="result-hero"><div><span>正确率</span><strong>${r.accuracy}<small>%</small></strong></div><div><h2>${r.correct} / ${r.total} 题正确</h2><p>已答 ${r.answered} 题 · 未答 ${r.unanswered} 题</p><p class="muted">这里记录练习表现，不换算官方 TOEIC 分数。</p></div></div><div class="part-results">${r.byPart.map((p) => `<div class="panel"><h3>Part ${p.part} · ${partNames[p.part]}</h3><strong>${p.correct} / ${p.total}</strong><div class="progress"><span style="width:${(p.correct / p.total) * 100}%"></span></div></div>`).join("")}</div><div class="actions"><button class="button" data-action="review-session" data-id="${s.id}">逐题看解析</button><button class="button secondary" data-action="review-wrong" data-id="${s.id}">复习本次错题</button></div>`;
 }
 function mistakes() {
-  const all = Object.values(state.mistakes),
-    tags = [
-      ...new Set(
-        all
-          .filter((m) => !mistakePart || m.part === Number(mistakePart))
-          .map((m) => m.tag),
-      ),
-    ].sort();
-  const list = all
-    .filter(
-      (m) =>
-        (!mistakeUnresolved || !m.resolved) &&
-        (!mistakePart || m.part === Number(mistakePart)) &&
-        (!mistakeTag || m.tag === mistakeTag),
-    )
-    .sort((a, b) => b.wrongCount - a.wrongCount || b.lastAt - a.lastAt);
-  main.innerHTML = `<div class="heading"><div><p class="eyebrow">MISTAKE REVIEW</p><h1>把反复出错的，练明白。</h1><p>按原书考点归类；连续两次答对后标记为已巩固。</p></div></div><div class="filters"><label>题型 <select id="mistake-part"><option value="">全部 Part</option>${[1, 2, 3, 4, 5, 6, 7].map((p) => `<option value="${p}" ${mistakePart === String(p) ? "selected" : ""}>Part ${p} ${partNames[p]}</option>`).join("")}</select></label><label>考点 <select id="mistake-tag"><option value="">全部考点</option>${tags.map((t) => `<option ${mistakeTag === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label><label class="check-label"><input type="checkbox" id="mistake-unresolved" ${mistakeUnresolved ? "checked" : ""}>只看未巩固</label></div>${list.length ? `<p class="muted">${list.length} 道错题 · 阅读和听力将连同完整题组一起复习</p><div class="mistake-list">${list.map((m) => `<article class="mistake-row"><div><span class="eyebrow">TEST ${m.test} · Q${m.number} · PART ${m.part}</span><h2>${esc(m.tag)}</h2><p>累计答错 ${m.wrongCount} 次 · ${m.resolved ? "已巩固" : `连续答对 ${m.streak} 次`}</p></div><button class="button secondary" data-action="retry-question" data-id="${m.id}">重练本组</button></article>`).join("")}</div>` : '<div class="empty"><h2>当前没有符合条件的错题</h2><p>完成练习后，答错的题会自动进入这里；未作答不直接认定为错题。</p><a href="#home" class="button secondary">去做一套练习</a></div>'}`;
+  const groups = groupMistakes(state.mistakes, mistakeUnresolved);
+  const list = groups[mistakeSection];
+  main.innerHTML = `<div class="heading"><div><p class="eyebrow">MISTAKE REVIEW</p><h1>把反复出错的，练明白。</h1><p>分听力与阅读复习；连续两次答对后标记为已巩固。</p></div></div><div class="filters"><div class="segmented mistake-sections" role="group" aria-label="错题分类">${[["listening","听力错题"],["reading","阅读错题"]].map(([key,label])=>`<button data-action="mistake-section" data-section="${key}" aria-pressed="${mistakeSection===key}">${label} · ${groups[key].length}</button>`).join("")}</div><label class="check-label"><input type="checkbox" id="mistake-unresolved" ${mistakeUnresolved ? "checked" : ""}>只看未巩固</label></div>${list.length ? `<p class="muted">${list.length} 道${mistakeSection==="listening" ? "听力" : "阅读"}错题 · 按答错次数优先，复习时保留完整题组</p><div class="mistake-list">${list.map((m) => `<article class="mistake-row"><div><span class="eyebrow">TEST ${m.test} · Q${m.number} · PART ${m.part}</span><h2>${partNames[m.part]}</h2><p>累计答错 ${m.wrongCount} 次 · ${m.resolved ? "已巩固" : `连续答对 ${m.streak} 次`}</p></div><button class="button secondary" data-action="retry-question" data-id="${m.id}">重练本组</button></article>`).join("")}</div>` : `<div class="empty"><h2>当前没有${mistakeUnresolved ? "未巩固的" : ""}${mistakeSection==="listening" ? "听力" : "阅读"}错题</h2><p>可以切换另一类查看。完成练习后，答错的题会自动进入这里；未作答不直接认定为错题。</p><a href="#home" class="button secondary">去做一套练习</a></div>`}`;
 }
 function history() {
   main.innerHTML = `<div class="heading"><div><p class="eyebrow">LEARNING HISTORY</p><h1>练习记录</h1><p>每一次完成，都可以回来复盘。</p></div><button class="button secondary" data-action="export">备份学习记录</button></div>${state.history.length ? `<div class="history-list">${state.history.map((s) => `<a class="history-row" href="#result/${s.id}"><div><h2>第 ${s.test} 套 · ${s.section === "full" ? "整套" : s.section === "listening" ? "听力" : "阅读"}${s.mode === "exam" ? "模拟考试" : "练习"}</h2><p>${new Date(s.finishedAt).toLocaleString("zh-CN")} · ${s.result.total} 题</p></div><strong>${s.result.correct}<small> / ${s.result.total}</small></strong><span>查看复盘 →</span></a>`).join("")}</div>` : '<div class="empty"><h2>还没有已交卷的练习</h2><p>未完成的练习可从首页继续。</p><a href="#home" class="button secondary">返回试卷</a></div>'}`;
@@ -522,6 +509,10 @@ document.addEventListener("click", async (e) => {
     s = currentSession(),
     q = currentQuestion();
   if (a === "setup") setup(b.dataset.test, b.dataset.section);
+  if (a === "mistake-section") {
+    mistakeSection = b.dataset.section;
+    mistakes();
+  }
   if (a === "resume") {
     review = null;
     setRoute("#practice");
@@ -627,15 +618,6 @@ document.addEventListener("click", async (e) => {
 });
 document.addEventListener("change", (e) => {
   const el = e.target;
-  if (el.id === "mistake-part") {
-    mistakePart = el.value;
-    mistakeTag = "";
-    mistakes();
-  }
-  if (el.id === "mistake-tag") {
-    mistakeTag = el.value;
-    mistakes();
-  }
   if (el.id === "mistake-unresolved") {
     mistakeUnresolved = el.checked;
     mistakes();
