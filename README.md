@@ -1,6 +1,29 @@
 # 托业全真练习 · TOEIC 女踢腿四套题
 
-基于“女踢腿”封面《新托业全真题库》的四套听力与阅读自测网站。书中试题是出版模拟试题，不标称 ETS 官方历年真题。共 800 题，没有原创扩充题、口语模块或生成式评分。
+基于“女踢腿”封面《新托业全真题库》的四套听力与阅读自测工具，提供**电脑离线版**与在线版。书中试题是出版模拟试题，不标称 ETS 官方历年真题。共 800 题，没有原创扩充题、口语模块或生成式评分。
+
+## 电脑离线版：推荐使用
+
+**无需购买域名或服务器，无需 VPN、登录、Node.js 或 Python。完整下载后，练习不再需要联网。**
+
+1. [下载最新电脑离线包 toeic-offline.zip](https://github.com/GrittingLeo/toeic-four-tests/releases/latest/download/toeic-offline.zip)，或打开 [Releases 发布页](https://github.com/GrittingLeo/toeic-four-tests/releases/latest)，下载附件中的 `toeic-offline.zip`。不要下载页面自动生成的 `Source code`，那是开发源码。
+2. 将 ZIP **完整解压**到电脑上的固定文件夹，不能在压缩包预览中打开。
+3. 双击 `toeic-offline/开始练习.html`，用桌面版 Edge 或 Chrome 打开即可。
+4. 点击录音播放器或“重听本题”播放音频。图片、录音、题库全部随包提供；请勿只移动 HTML，也不要删除 `images`、`media` 或 JS 文件。
+
+离线版保留全部练习功能，资源解压后约 247 MB。GitHub 下载在部分国内网络下仍可能不畅；可以由能下载的人取得完整包后，通过适用授权范围内的文件传输渠道交付。**“离线运行”不等于保证 GitHub 下载在所有网络下畅通。**
+
+### 学习记录与版本更新
+
+- 记录只保存在当前浏览器，不写入离线包，也不上传服务器。
+- 本地文件的浏览器存储行为存在差异；请使用正常窗口，并固定浏览器和文件夹位置。
+- **移动或重命名文件夹、换电脑/浏览器、更新离线包、清理浏览器数据前，先点击首页“备份学习记录”。**
+- 在新位置打开练习后，点击“恢复学习记录”，选择之前的 JSON 备份并确认即可。
+- 在线版与离线版不自动共享记录，可通过上述备份/恢复迁移。若浏览器禁止保存，关闭页面前必须导出备份。
+
+### 在线入口
+
+[打开在线版](https://toeic-four-tests-private.olixu99.chatgpt.site/)（国内部分网络可能无法直连，电脑用户优先使用离线包）。本次增加离线发行包，不改变现有在线站点。
 
 ## 使用
 
@@ -14,7 +37,7 @@
 - 答案、练习记录、错题与词汇掌握度仅存本地浏览器，支持 JSON 备份与恢复。没有登录、跨设备同步、广告或分析追踪。清理站点数据前请备份，建议一次只开一个作答窗口。
 - 仅报告正确数和正确率，不提供未经校准的 990 分换算。
 
-## 本地运行
+## 开发与构建（普通使用者不需要）
 
 需要 Node.js 20 或更新版本，网站运行不依赖框架。
 
@@ -24,13 +47,28 @@ npm start
 npm test
 npm run validate
 npm run build
+npm run build:offline
 ```
 
-部署目录为 `dist/client`。所有路径相对引用，可以放在静态网站根目录或子目录。不要直接双击 HTML：浏览器对本地文件读取 JSON 的限制会阻止加载题库。
+在线部署目录为 `dist/client`，离线输出为 `dist/offline/toeic-offline`。所有路径相对引用。`web/index.html` 是在线源码入口，不能直接双击；**离线构建生成的 `开始练习.html` 才支持双击运行**。
+
+离线构建将题库 JSON 转换为本地普通脚本，并将前端模块合并为一个普通脚本，不使用 `file://` 下受限制的 JSON 请求或模块加载；保留本地图片和音频文件。离线页面以内容安全策略禁用网络数据请求。不引入第三方构建依赖，不包含用户记录、原 PDF 或账号凭据。
+
+Windows 发布包构建：
+
+```powershell
+npm test
+npm run validate
+powershell -NoProfile -File tools/package-offline.ps1
+```
+
+输出：`dist/toeic-offline.zip` 与 `dist/toeic-offline.zip.sha256`。发布 ZIP 作为 GitHub Release 附件，不把重复的大文件压缩包提交进 Git 历史。
 
 ## 目录
 
 - `web/`：前端源码、题库 JSON、题页图片和网页用音频。
+- `web/data-loader.js`：共享数据加载逻辑；在线读取 JSON，离线使用预打包数据。
+- `tools/build-offline.mjs`、`tools/package-offline.ps1`：生成可双击的电脑离线版及 ZIP 发行包。
 - `tools/extract-book.py`：从持有的 PDF 提取题目、答案、解析、原图和词汇，包含已核对的提取修正。
 - `tools/prepare-audio.py`、`tools/build-audio-index.mjs`、`tools/split-audio.py`：原音频转码、题组索引与独立短音频生成；重建索引后需重新运行切分脚本。
 - `tools/listening_options.py`：从已提取的原书听力文本补齐 Part 1、2 英文选项；PDF 提取脚本复用同一解析规则。

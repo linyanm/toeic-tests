@@ -11,6 +11,7 @@ import {
   groupMistakes,
 } from "./engine.js";
 import { POS_LABELS } from "./vocabulary.js";
+import { loadStudyData } from "./data-loader.js";
 const $ = (s) => document.querySelector(s),
   esc = (s) =>
     String(s ?? "").replace(
@@ -741,7 +742,9 @@ player.ontimeupdate = () => {
 player.onended = () => {
   if (!review && state.active?.mode === "exam") switchToReading();
 };
-player.onerror = () => toast("录音加载失败，请检查网络后重试。");
+player.onerror = () => toast(location.protocol === "file:"
+  ? "录音加载失败，请确认离线包已完整解压，且 media 文件夹没有移动或删除。"
+  : "录音加载失败，请检查网络后重试。");
 window.addEventListener("hashchange", route);
 window.addEventListener("beforeunload", (e) => {
   if (dirty || saving) {
@@ -753,13 +756,7 @@ setInterval(updateTimer, 1000);
 async function init() {
   try {
     main.innerHTML = '<div class="empty"><h1>正在打开学习空间…</h1></div>';
-    const results = await Promise.all([
-      ...Array.from({ length: 4 }, (_, i) => fetch(`data/test${i + 1}.json`)),
-      fetch("data/vocabulary.json"),
-      fetch("data/audio.json"),
-    ]);
-    if (results.some((r) => !r.ok)) throw Error("资料或学习记录暂时无法加载。");
-    const data = await Promise.all(results.map((r) => r.json()));
+    const data = await loadStudyData();
     banks = data.slice(0, 4);
     vocabulary = data[4];
     audioIndex = data[5];
