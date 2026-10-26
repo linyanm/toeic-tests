@@ -77,6 +77,18 @@ powershell -NoProfile -File tools/package-offline.ps1
 
 原 PDF 和原始高码率录音不包含在仓库中。网站音频为同一原录音的 64 kbps 单声道副本，不是 TTS。题组定位由语音识别时间戳与题号对齐，少量遗漏标题依据相邻内容修正；并非逐秒人工试听认证。
 
+
+## ETS 官方免费 Sample
+
+ETS 不公开历年正式考卷。可练习的官方免费材料是 [TOEIC Listening & Reading Sample Test（PDF）](https://www.ets.org/pdfs/toeic/toeic-listening-reading-sample-test.pdf)（Form ST-05）：
+
+- 约 **60 题**（听力/阅读各约 30），不是完整 200 题卷
+- PDF 内含 **Sample Form Correct Answers** 与听力 **Script**
+- **没有**与本 Sample Form 一一对应、可直接切段进本站播放器的官方整卷音频（香港 [Download Zone](https://www.toeic.com.hk/index/showarticle/itpdownload/en) 上的 Practice Test 音轨是另一套练习材料）
+- 因此本仓库 **不把 Sample 题干内嵌进题库 JSON / Pages**，首页提供官方 PDF 外链，避免再分发受版权保护的样题正文
+
+若要增加站内可播的完整套数，请使用你合法持有的正版模拟书/官方练习，再走提取脚本。
+
 ## 内容与授权边界
 
 书本题目、答案、中文解析、词汇释义、截图及录音属于第三方资料，不能由网站代码的开放推导出第三方内容的再授权。本项目所有者在发布准备时确认持有公开分发授权；授权方和可展示的具体授权说明由所有者补充维护。此说明不代表对授权文件的独立审核，也不授予访问者额外的复制、商业使用或再分发权限。
